@@ -1,0 +1,63 @@
+enum UserStatus {
+    INVITED
+    VERIFIED
+}
+
+model User {
+    id                String             @id @default(uuid())
+    name              String?
+    email             String?            @unique
+    pictureUrl        String?            @default('https://i.imgur.com/ZdJSK3Y.jpeg')
+    tokenInvitation   String?
+
+    status            UserStatus         @default(VERIFIED)
+
+    // this is the role of the user for the application
+    globalRole        String             @default('USER')
+    password          String?            @password @omit
+    createdAt         DateTime           @default(now())
+    updatedAt         DateTime           @updatedAt @default(now())
+
+    passwordEntrys    PasswordEntry[]    @relation("user")
+    clipboardHistorys ClipboardHistory[] @relation("user")
+
+    @@auth()
+    @@allow("all", auth().id == this.id)
+    @@allow('all', auth().globalRole == 'ADMIN')
+
+    //we only allow that user to register if they don't create an admin role
+    @@allow("create", globalRole != 'ADMIN')
+    @@allow("read", true)
+}
+
+model PasswordEntry {
+
+    id                String             @id @default(uuid())
+    appName           String?
+    username          String?
+    encryptedPassword String?
+    lastCopied        String
+    userId            String?
+    user              User?              @relation(fields: [userId], references: [id], name: "user")
+
+    clipboardHistorys ClipboardHistory[] @relation("passwordEntry")
+    createdAt         DateTime           @default(now())
+    updatedAt         DateTime           @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model ClipboardHistory {
+
+    id              String         @id @default(uuid())
+    type            String?
+    timestamp       String
+    userId          String?
+    user            User?          @relation(fields: [userId], references: [id], name: "user")
+    passwordEntryId String?
+    passwordEntry   PasswordEntry? @relation(fields: [passwordEntryId], references: [id], name: "passwordEntry")
+
+    createdAt       DateTime       @default(now())
+    updatedAt       DateTime       @updatedAt @default(now())
+    @@allow("all", true)
+}
+
